@@ -3,7 +3,6 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 
 from app.models.packages import Package
 from app.models.couriers import Courier

@@ -5,8 +5,11 @@ from uuid import uuid4
 from sqlalchemy import Column, Integer, String, Enum, DateTime, JSON, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declared_attr
+
 
 from app.database import Base
+from app.utils import generate_tracking_number
 
 
 class PackageType(str, enum.Enum):
@@ -47,8 +50,19 @@ class Package(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     meta_data = Column(JSON, nullable=True)
+    tracking_number = Column(String, nullable=True, unique=True)
     
     courier_id = Column(UUID(as_uuid=True), ForeignKey('couriers.uuid'), nullable=False)
     
     courier = relationship('Courier', back_populates='packages')
     
+
+    @declared_attr
+    def __mapper_args__(cls):
+        def before_insert(mapper, connection, target):
+            if not target.tracking_number:
+                target.tracking_number = generate_tracking_number()
+                
+        from sqlalchemy import event
+        event.listen(cls, 'before_insert', before_insert)
+        return {}

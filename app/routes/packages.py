@@ -13,8 +13,8 @@ from app.dependencies import get_db
 from app.crud.packages import create_package, get_packages, get_package
 from app.models.couriers import Courier
 from app.auth import get_current_courier
-# from app.logging import logger
-# from app.services.rabbitmq_producer import publish_message
+from app.logging import logger
+from app.services.rabbitmq_producer import publish_message
 
 
 Base.metadata.create_all(bind=engine)
@@ -25,6 +25,30 @@ router = APIRouter()
 @router.post('/create', response_model=ResponseModel, status_code=status.HTTP_201_CREATED)
 def create_new_package(package: PackageCreate, db: Session = Depends(get_db), current_courier: Courier = Depends(get_current_courier)):
     new_package = create_package(db, package, current_courier)
+    
+    message = {
+        'event': 'package-registration',
+        'data': {
+            'courier_id': str(new_package.courier_id),                
+            'class': new_package.package_type.value,
+            'origin_state': new_package.origin_state,
+            'origin_city': new_package.origin_city,
+            'destination_state': new_package.destination_state,
+            'destination_city': new_package.destination_city,
+            'tracking_number': new_package.tracking_number,
+            'meta_data': new_package.meta_data,
+            'created_at': str(new_package.created_at),
+        }
+    }
+    
+    try:
+        publish_message(config('RABBITMQ_QUEUE'), message)
+    except Exception as e:
+        logger.error(f"RabbitMQ publish failed for the package {new_package.uuid}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail='Package created, but failed to queue for processing'
+        )
         
     package_data = PackageOut.from_orm(new_package)
     
