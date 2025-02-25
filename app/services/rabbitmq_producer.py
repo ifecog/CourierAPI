@@ -8,16 +8,18 @@ def publish_message(courier_queue: str, message: dict):
         pika.ConnectionParameters(host=config('RABBITMQ_HOST'))
     )
     channel = connection.channel()
-    channel.queue_declare(queue=courier_queue)
+    channel.queue_declare(queue=courier_queue, durable=True)
     
-    channel.basic_publish(
-        exchange='',
-        routing_key=courier_queue,
-        body=json.dumps(message),
-        properties=pika.BasicProperties(content_type="application/json")
-    )
+    for _ in range(100000):
+        channel.basic_publish(
+            exchange='',
+            routing_key=courier_queue,
+            body=json.dumps(message),
+            properties=pika.BasicProperties(content_type="application/json")
+        )
     
-    print(f' [X] Sent {message} to queue {courier_queue}')
-    
+    # print(f' [X] Sent {message} to queue {courier_queue}')
+    print(f' [X] Sent 100,000 messages to queue {courier_queue}')
+        
     connection.close()
     

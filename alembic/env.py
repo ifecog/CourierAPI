@@ -8,7 +8,6 @@ from alembic import context
 from app.database import get_sqlalchemy_url, Base
 from app.models.packages import Package
 
-
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
